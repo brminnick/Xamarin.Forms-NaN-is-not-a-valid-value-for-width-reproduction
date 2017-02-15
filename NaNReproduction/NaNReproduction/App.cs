@@ -7,6 +7,8 @@ using System.Net.Http;
 using System.Net;
 using System.Net.Http.Headers;
 using Newtonsoft.Json;
+using System.ComponentModel;
+using System.Diagnostics;
 
 namespace NaNReproduction
 {
@@ -41,7 +43,7 @@ namespace NaNReproduction
 
 		public PuzzleCellCardView()
 		{
-			var puzzleImage = new Image
+			_puzzleImage = new Image
 			{
 				HeightRequest = 150,
 				BackgroundColor = Color.White
@@ -133,9 +135,8 @@ namespace NaNReproduction
 	{
 		public ListViewContentPage()
 		{
-			List<AzurePunModel> azurePunList;
-
-			Task.Run(async () => azurePunList = await GetAzurePunModels()).Wait();
+			var viewModel = new ListViewViewModel();
+			BindingContext = viewModel;
 
 			var listView = new ListView(ListViewCachingStrategy.RecycleElement)
 			{
@@ -144,9 +145,32 @@ namespace NaNReproduction
 				ItemTemplate = new DataTemplate(typeof(PuzzleCellCardView)),
 				SeparatorColor = Color.Transparent
 			};
+			listView.SetBinding(ListView.ItemsSourceProperty, nameof(viewModel.AzurePunModelList));
 
 			Content = listView;
 		}
+	}
+
+	public class ListViewViewModel : INotifyPropertyChanged
+	{
+		List<AzurePunModel> _azurePunModelList;
+
+		public ListViewViewModel()
+		{
+			Task.Run(async () => AzurePunModelList = await GetAzurePunModels());
+		}
+
+		public List<AzurePunModel> AzurePunModelList
+		{
+			get { return _azurePunModelList; }
+			set
+			{
+				_azurePunModelList = value;
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AzurePunModelList)));
+			}
+		}
+
+		public event PropertyChangedEventHandler PropertyChanged;
 
 		async Task<List<AzurePunModel>> GetAzurePunModels()
 		{
@@ -157,10 +181,15 @@ namespace NaNReproduction
 
 	public class App : Application
 	{
+		static readonly JsonSerializer _serializer = new JsonSerializer();
+		static HttpClient _client;
+
 		public App()
 		{
 			MainPage = new ListViewContentPage();
 		}
+
+		static HttpClient Client => _client ?? (_client = CreateHttpClient());
 
 		public static ImageSource ConvertBase64StringToImageSource(string imageAsBase64String)
 		{
@@ -199,7 +228,6 @@ namespace NaNReproduction
 			return client;
 		}
 
-		static readonly JsonSerializer _serializer = new JsonSerializer();
 
 		public static async Task<T> GetDataObjectFromAPI<T>(string apiUrl)
 		{
@@ -207,7 +235,7 @@ namespace NaNReproduction
 			{
 				try
 				{
-					var response = await CreateHttpClient().GetAsync(apiUrl);
+					var response = await Client.GetAsync(apiUrl);
 					using (var stream = await response.Content.ReadAsStreamAsync())
 					using (var reader = new StreamReader(stream))
 					using (var json = new JsonTextReader(reader))
@@ -221,6 +249,7 @@ namespace NaNReproduction
 				}
 				catch (Exception e)
 				{
+					Debug.WriteLine(e);
 					return default(T);
 				}
 			});
