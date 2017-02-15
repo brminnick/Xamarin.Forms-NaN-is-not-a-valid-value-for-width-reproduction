@@ -20,10 +20,9 @@ Reproduction Code Snippet to induce `System.ArgumentException: NaN is not a vali
 Version 6.1.5 (build 0)
 Installation UUID: 3ac98a61-67a7-411f-b124-19833ec9a519
 Runtime:
-	Mono 4.6.2 (mono-4.6.0-branch/ac9e222) (64-bit)
-	GTK+ 2.24.23 (Raleigh theme)
-
-	Package version: 406020016
+ - Mono 4.6.2 (mono-4.6.0-branch/ac9e222) (64-bit)
+ - GTK+ 2.24.23 (Raleigh theme)
+ - Package version: 406020016
 
 === NuGet ===
 
