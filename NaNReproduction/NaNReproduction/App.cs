@@ -1,14 +1,17 @@
 ﻿using System;
 using System.IO;
-using Xamarin.Forms;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Net.Http;
 using System.Net;
-using System.Net.Http.Headers;
-using Newtonsoft.Json;
-using System.ComponentModel;
+using System.Linq;
+using System.Net.Http;
 using System.Diagnostics;
+using System.ComponentModel;
+using System.Threading.Tasks;
+using System.Net.Http.Headers;
+using System.Collections.Generic;
+
+using Newtonsoft.Json;
+
+using Xamarin.Forms;
 
 namespace NaNReproduction
 {
@@ -138,6 +141,10 @@ namespace NaNReproduction
 			var viewModel = new ListViewViewModel();
 			BindingContext = viewModel;
 
+			var activityIndicator = new ActivityIndicator();
+			activityIndicator.SetBinding(ActivityIndicator.IsRunningProperty, nameof(viewModel.IsBusy));
+			activityIndicator.SetBinding(ActivityIndicator.IsVisibleProperty, nameof(viewModel.IsBusy));
+
 			var listView = new ListView(ListViewCachingStrategy.RecycleElement)
 			{
 				BackgroundColor = Color.White,
@@ -147,17 +154,42 @@ namespace NaNReproduction
 			};
 			listView.SetBinding(ListView.ItemsSourceProperty, nameof(viewModel.AzurePunModelList));
 
-			Content = listView;
+			var relativeLayout = new RelativeLayout();
+
+			Func<RelativeLayout, double> getActivityIndicatorHeight = (p) => activityIndicator.Measure(relativeLayout.Width, relativeLayout.Height).Request.Height;
+			Func<RelativeLayout, double> getActivityIndicatorWidth = (p) => activityIndicator.Measure(relativeLayout.Width, relativeLayout.Height).Request.Width;
+
+			relativeLayout.Children.Add(listView,
+									   Constraint.Constant(0),
+									   Constraint.Constant(0),
+									   Constraint.RelativeToParent(parent => parent.Width),
+									   Constraint.RelativeToParent(parent => parent.Height));
+			relativeLayout.Children.Add(activityIndicator,
+									   Constraint.RelativeToParent(parent => parent.Width / 2 - getActivityIndicatorWidth(parent) / 2),
+									   Constraint.RelativeToParent(parent => parent.Height / 2 - getActivityIndicatorHeight(parent) / 2));
+
+			Content = relativeLayout;
 		}
 	}
 
 	public class ListViewViewModel : INotifyPropertyChanged
 	{
+		bool _isBusy;
 		List<AzurePunModel> _azurePunModelList;
 
 		public ListViewViewModel()
 		{
-			Task.Run(async () => AzurePunModelList = await GetAzurePunModels());
+			Task.Run(async () => AzurePunModelList = (await GetAzurePunModels()));
+		}
+
+		public bool IsBusy
+		{
+			get { return _isBusy; }
+			set
+			{
+				_isBusy = value;
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsBusy)));
+			}
 		}
 
 		public List<AzurePunModel> AzurePunModelList
@@ -174,8 +206,17 @@ namespace NaNReproduction
 
 		async Task<List<AzurePunModel>> GetAzurePunModels()
 		{
-			var azurePunModelList = await App.GetDataObjectFromAPI<List<AzurePunModel>>("https://mondaypundayappservices.azurewebsites.net/tables/AzurePunModel");
-			return azurePunModelList;
+			IsBusy = true;
+
+			try
+			{
+				var azurePunModelList = await App.GetDataObjectFromAPI<IEnumerable<AzurePunModel>>("https://mondaypundayappservices.azurewebsites.net/tables/AzurePunModel");
+				return azurePunModelList.OrderByDescending(x => x.PunNumber).ToList();
+			}
+			finally
+			{
+				IsBusy = false;
+			}
 		}
 	}
 
@@ -242,8 +283,7 @@ namespace NaNReproduction
 					{
 						if (json == null)
 							return default(T);
-
-						return _serializer.Deserialize<T>(json);
+													return _serializer.Deserialize<T>(json);
 					}
 
 				}
