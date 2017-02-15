@@ -4,9 +4,9 @@ A Xamarin.Forms solution to reproduce System.ArgumentException: NaN is not a val
 Reproduction Code Snippet to induce `System.ArgumentException: NaN is not a valid value for width`
 
 ##Reproduction Steps
- - Download and open `NaNReproduction.sln`
- - In the Solution Explorer, Right-click on `NaNReproduction.iOS` and select `Set As Startup Project`
- - Build, Deploy, and Run the app on an iOS 10.2 Simulator
+ 1. Download and open `NaNReproduction.sln` in Xamarin Studio
+ 2. In the Solution Explorer, Right-click on `NaNReproduction.iOS` and select `Set As Startup Project`
+ 3. Build, Deploy, and Run the app on an iOS 10.2 Simulator
 
 ##Error
 >System.ArgumentException: NaN is not a valid value for width
